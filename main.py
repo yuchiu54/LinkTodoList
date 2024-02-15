@@ -4,18 +4,19 @@ import shutil
 import sqlite3
 import sys
 
-# copy or update place.split from ~/snap/firefox/common/.mozilla/firefox/l63o54ib.default/places.sqlite
+from dotenv import load_dotenv
+from terminaltables import AsciiTable
+
 def copy_places_sqlite():
-    expanded_user = os.path.expanduser("~/snap/firefox/common/.mozilla/firefox/l63o54ib.default/places.sqlite")
+    places_sqlite = os.getenv("PLACES_SQLITE")
+    expanded_user = os.path.expanduser(places_sqlite)
     shutil.copy2(expanded_user, "./")
 
-# predefined sql queries: db for places.sqlite, db for todo
 def get_places_sqlite_connection():
     conn = sqlite3.connect("places.sqlite")
     conn.row_factory = sqlite3.Row
     return conn
 
-# access todo list from sqlite
 def init_todo_tables():
     conn = sqlite3.connect("todo.db")
     with open("schema.sql") as f:
@@ -29,7 +30,7 @@ def get_todo_connection():
     return conn
 
 def read_all_items():
-    query = "Select * From items i LEFT JOIN urls u ON u.item_id = i.id WHERE i.status='on-going'"
+    query = "Select i.id, name, status, content, created From items i LEFT JOIN urls u ON u.item_id = i.id WHERE i.status='on-going'"
     conn = get_todo_connection()
     items = conn.execute(query).fetchall()
     return items
@@ -56,21 +57,18 @@ def remove_item_from_list(item_id, status):
     conn.close()
 
 def display(items):
-    for item in items:
-        # name, status, created, content
-        item_id = str(item["id"])
-        name = item["name"]
-        status = item["status"]
-        created = item["created"]
-        content = item["content"] if item["content"] != None else "\t\t"
-        result = "\t".join([item_id, name, content, status, created])
-        print(result)
+    headers = ["id", "name", "status", "content", "created"]
+    item_list = [list(item) for item in items]
+    item_list.insert(0, headers)
+    table = AsciiTable(item_list)
+    print(table.table)
 
 def usage():
     guide = """
         python main.py r
                        i    --item_name
                        u    --item_id    --content
+                       d    --item_id    --status
     """
     print(guide)
 
@@ -112,5 +110,7 @@ def get_parse():
     return parser.parse_args()
 
 if __name__ == "__main__":
+    load_dotenv()
+    copy_places_sqlite()
     init_todo_tables()
     main()
