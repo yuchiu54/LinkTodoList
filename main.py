@@ -29,42 +29,48 @@ def get_todo_connection():
     return conn
 
 def read_all_items():
-    query = "select * from items where status='on-going'"
-    query = "select * from items i join urls u on u.item_id = i.id where i.status='on-going'"
+    query = "Select * From items i LEFT JOIN urls u ON u.item_id = i.id WHERE i.status='on-going'"
     conn = get_todo_connection()
     items = conn.execute(query).fetchall()
     return items
 
-def adding_item(name):
+def create_item(name):
     query = "insert into items (name) values (?)"
     conn = get_todo_connection()
     conn.execute(query, (name,))
     conn.commit()
     conn.close()
 
-def adding_url(item_id, content):
+def create_url(item_id, content):
     query = "insert into urls (item_id, content) values (?, ?)"
     conn = get_todo_connection()
     conn.execute(query, (item_id, content,))
     conn.commit()
     conn.close()
 
+def remove_item_from_list(item_id, status):
+    query = f"UPDATE items SET status=? WHERE id=?"
+    conn = get_todo_connection()
+    conn.execute(query, [status, item_id])
+    conn.commit()
+    conn.close()
+
 def display(items):
     for item in items:
         # name, status, created, content
+        item_id = str(item["id"])
         name = item["name"]
         status = item["status"]
         created = item["created"]
-        content = item["content"]
-        result = " - ".join([name, status, content, created])
-#        print(f"{name}\t{status}\t{content}\t{created}\t")
+        content = item["content"] if item["content"] != None else "\t\t"
+        result = "\t".join([item_id, name, content, status, created])
         print(result)
 
 def usage():
     guide = """
         python main.py r
-                       t --item_name
-                       u --item_id --content
+                       i    --item_name
+                       u    --item_id    --content
     """
     print(guide)
 
@@ -74,28 +80,37 @@ def main():
     if args.operation == "r":
         items = read_all_items()
         display(items)
-    elif args.operation == "t":
-        pass
+    elif args.operation == "i":
+        item_name = args.params[0]
+        create_item(item_name)
     elif args.operation == "u":
-        pass
+        item_id = args.params[0]
+        content = args.params[1]
+        create_url(item_id, content)
+    elif args.operation == "d":
+        item_id = args.params[0]
+        status = args.params[1]
+        remove_item_from_list(item_id, status)
     else:
         usage()
-
-#    print(items[0]['name'])
-#    adding_item("forever")
-#    items = read_all_items()
-#    print(items[-1]['name'])
 
 def get_parse():
     parser = argparse.ArgumentParser(allow_abbrev=False)
     sub_parser = parser.add_subparsers(dest="operation")
+
     read_parser = sub_parser.add_parser("r", help="read todo list")
-    read_parser.add_argument("args", nargs="*", help="args for read")
-    create_parser = sub_parser.add_parser("c", help="create item or url")
-    create_parser.add_argument("args", nargs="+", help="args for create item or url")
+    read_parser.add_argument("params", nargs="*", help="params for read mode")
+
+    create_parser = sub_parser.add_parser("i", help="create item")
+    create_parser.add_argument("params", nargs="+", help="params for creating item")
+
+    create_parser = sub_parser.add_parser("u", help="create url")
+    create_parser.add_argument("params", nargs="+", help="params for creating url")
+
+    create_parser = sub_parser.add_parser("d", help="remove item from todo list")
+    create_parser.add_argument("params", nargs="+", help="params for removing item")
     return parser.parse_args()
 
 if __name__ == "__main__":
-#    init_todo_tables()
+    init_todo_tables()
     main()
-#    args = get_parse()
