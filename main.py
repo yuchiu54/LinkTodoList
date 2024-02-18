@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import os
 import shutil
 import sqlite3
@@ -16,6 +17,18 @@ def get_places_sqlite_connection():
     conn = sqlite3.connect("places.sqlite")
     conn.row_factory = sqlite3.Row
     return conn
+
+def get_time():
+    t = datetime.datetime.today()
+    d = int(datetime.date(t.year, t.month, t.day).strftime("%s")) * 10 ** 6
+    nd = int(datetime.date(t.year, t.month, t.day + 1).strftime("%s")) * 10 ** 6
+    return d, nd
+
+def get_daily_history(d, nd):
+    query = "SELECT id, url, title FROM moz_places WHERE last_visit_date>? and last_visit_date<?"
+    conn = get_places_sqlite_connection()
+    rows = conn.execute(query, (d, nd)).fetchall()
+    return rows
 
 def init_todo_tables():
     conn = sqlite3.connect("todo.db")
@@ -71,7 +84,7 @@ def display(items):
 
 def usage():
     guide = """
-        python main.py r
+        python main.py r    --o          --item_id
                        i    --item_name
                        u    --item_id    --content
                        d    --item_id    --status
@@ -126,7 +139,7 @@ def get_parse():
     return parser.parse_args()
 
 if __name__ == "__main__":
-    load_dotenv()
-    copy_places_sqlite()
-    init_todo_tables()
-    main()
+#    load_dotenv()
+#    copy_places_sqlite()
+#    init_todo_tables()
+#    main()
