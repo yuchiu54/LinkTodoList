@@ -35,6 +35,12 @@ def read_all_items():
     items = conn.execute(query).fetchall()
     return items
 
+def read_one_item(item_id):
+    query = "Select i.id, name, status, content, created From items i JOIN urls u On u.item_id = i.id WHERE i.id=(?)"
+    conn = get_todo_connection()
+    item = conn.execute(query, (item_id,)).fetchall()
+    return item
+
 def create_item(name):
     query = "insert into items (name) values (?)"
     conn = get_todo_connection()
@@ -76,19 +82,29 @@ def usage():
 def main():
     args = get_parse()
     if args.operation == "r":
-        items = read_all_items()
-        display(items)
+        if len(args.params) == 0:
+            items = read_all_items()
+            display(items)
+        else:
+            if args.params[0] == "o":
+                item_id = args.params[1]
+                item = read_one_item(item_id)
+                display(item)
+
     elif args.operation == "i":
         item_name = args.params[0]
         create_item(item_name)
+
     elif args.operation == "u":
         item_id = args.params[0]
         content = args.params[1]
         create_url(item_id, content)
+
     elif args.operation == "d":
         item_id = args.params[0]
         status = args.params[1]
         remove_item_from_list(item_id, status)
+
     else:
         usage()
 
